@@ -48,11 +48,14 @@ pipeline {
         success {
             echo 'Archiving build artifacts for distribution...'
             archiveArtifacts artifacts: 'index.html', fingerprint: true
+            
+            /* SIMULATING CHAT WORKSPACE NOTIFICATION */
+            echo '📢 BROADCASTING TO TEAM: 🟢 Pipeline Succeeded! Build #' + env.BUILD_NUMBER + ' is live inside the container registry.'
             echo '✅ PIPELINE COMPLETE: All systems operational.'
         }
         failure {
+            echo '📢 BROADCASTING TO TEAM: 🔴 URGENT! Pipeline Failed on Build #' + env.BUILD_NUMBER + '. Reverting changes.'
             echo '❌ PIPELINE CRASHED: Reverting to last known stable container...'
-            // Automated rollback strategy if health check fails
             sh 'docker start restaurant-production || true'
         }
     }
