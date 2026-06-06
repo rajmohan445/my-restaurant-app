@@ -1,10 +1,14 @@
 pipeline {
     agent any
 
+    parameters {
+        choice(name: 'DEPLOY_ENV', choices: ['Staging', 'Production'], description: 'Select the target environment for Bunny\'s Bistro')
+    }
+
     stages {
         stage('Fetch Code') {
             steps {
-                echo 'Pulling the latest restaurant menu updates...'
+                echo "Pulling latest code for ${params.DEPLOY_ENV} deployment..."
                 checkout scm
             }
         }
@@ -19,44 +23,31 @@ pipeline {
         
         stage('Build Docker Image') {
             steps {
-                echo "🔨 Compiling the container image for Bunny's Bistro..."
-                sh "docker build -t restaurant-app:v${BUILD_NUMBER} ."
+                echo "🔨 Compiling image: restaurant-app:${params.DEPLOY_ENV.toLowerCase()}-v${BUILD_NUMBER}"
+                sh "docker build -t restaurant-app:${params.DEPLOY_ENV.toLowerCase()}-v${BUILD_NUMBER} ."
             }
         }
 
-        stage('Deploy Container') {
+        stage('Deploy To Target') {
             steps {
-                echo "🚀 Deploying isolated container to production environment..."
-                sh 'docker stop restaurant-production || true'
-                sh 'docker rm restaurant-production || true'
-                sh "docker run -d --name restaurant-production -p 8081:80 restaurant-app:v${BUILD_NUMBER}"
-                echo "Waiting 5 seconds for web server initialization..."
-                sleep 5
-            }
-        }
-
-        stage('Verify Deployment Health') {
-            steps {
-                echo "🔍 Running post-deployment validation suite..."
-                sh 'chmod +x monitor_health.sh'
-                sh './monitor_health.sh'
+                script {
+                    // Staging will run on port 8082, Production stays on port 8081
+                    def targetPort = (params.DEPLOY_ENV == 'Production') ? '8081' : '8082'
+                    def containerName = "restaurant-${params.DEPLOY_ENV.toLowerCase()}"
+                    
+                    echo "🚀 Deploying to ${params.DEPLOY_ENV} on port ${targetPort}..."
+                    
+                    sh "docker stop ${containerName} || true"
+                    sh "docker rm ${containerName} || true"
+                    sh "docker run -d --name ${containerName} -p ${targetPort}:80 restaurant-app:${params.DEPLOY_ENV.toLowerCase()}-v${BUILD_NUMBER}"
+                }
             }
         }
     }
 
     post {
         success {
-            echo 'Archiving build artifacts for distribution...'
-            archiveArtifacts artifacts: 'index.html', fingerprint: true
-            
-            /* SIMULATING CHAT WORKSPACE NOTIFICATION */
-            echo '📢 BROADCASTING TO TEAM: 🟢 Pipeline Succeeded! Build #' + env.BUILD_NUMBER + ' is live inside the container registry.'
-            echo '✅ PIPELINE COMPLETE: All systems operational.'
-        }
-        failure {
-            echo '📢 BROADCASTING TO TEAM: 🔴 URGENT! Pipeline Failed on Build #' + env.BUILD_NUMBER + '. Reverting changes.'
-            echo '❌ PIPELINE CRASHED: Reverting to last known stable container...'
-            sh 'docker start restaurant-production || true'
+            echo "✅ Deployment to ${params.DEPLOY_ENV} completed successfully!"
         }
     }
 }
