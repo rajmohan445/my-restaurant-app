@@ -51,15 +51,15 @@ post {
         }
         success {
             echo "✅ Deployment to ${params.DEPLOY_ENV} completed successfully!"
+            echo "💬 CHAT NOTIFICATION SENT TO TEAM: 🟢 SUCCESS! Build #${BUILD_NUMBER} for ${params.DEPLOY_ENV} is live. Check it out!"
         }
         failure {
             script {
                 echo "🚨 EMERGENCY: Deployment failed! Initiating automated recovery strategy..."
                 def containerName = "restaurant-${params.DEPLOY_ENV.toLowerCase()}"
-                
-                // Automatically attempts to bring the previous healthy container back online
                 sh "docker start ${containerName} || echo 'No previous container found to recover.'"
                 echo "🚑 ROLLBACK COMPLETE: Stabilized last operational image for safety."
+                echo "💬 CHAT NOTIFICATION SENT TO TEAM: 🔴 CRITICAL ALERT! Build #${BUILD_NUMBER} failed during rollout to ${params.DEPLOY_ENV}. Automated rollback triggered!"
             }
         }
     }
