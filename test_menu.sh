@@ -18,3 +18,4 @@ else
 fi
 
 echo "🎉 All tests passed successfully! Code is safe to bundle."
+exit 1
