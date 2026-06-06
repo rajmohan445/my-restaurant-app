@@ -31,7 +31,6 @@ pipeline {
         stage('Deploy To Target') {
             steps {
                 script {
-                    // Staging will run on port 8082, Production stays on port 8081
                     def targetPort = (params.DEPLOY_ENV == 'Production') ? '8081' : '8082'
                     def containerName = "restaurant-${params.DEPLOY_ENV.toLowerCase()}"
                     
@@ -46,6 +45,11 @@ pipeline {
     }
 
     post {
+        always {
+            echo '🧹 Clearing out dangling build layers and preserving disk health...'
+            // Forces Docker to delete unused dangling images without asking for confirmation
+            sh 'docker image prune -f'
+        }
         success {
             echo "✅ Deployment to ${params.DEPLOY_ENV} completed successfully!"
         }
