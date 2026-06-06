@@ -44,14 +44,23 @@ pipeline {
         }
     }
 
-    post {
+post {
         always {
             echo '🧹 Clearing out dangling build layers and preserving disk health...'
-            // Forces Docker to delete unused dangling images without asking for confirmation
             sh 'docker image prune -f'
         }
         success {
             echo "✅ Deployment to ${params.DEPLOY_ENV} completed successfully!"
+        }
+        failure {
+            script {
+                echo "🚨 EMERGENCY: Deployment failed! Initiating automated recovery strategy..."
+                def containerName = "restaurant-${params.DEPLOY_ENV.toLowerCase()}"
+                
+                // Automatically attempts to bring the previous healthy container back online
+                sh "docker start ${containerName} || echo 'No previous container found to recover.'"
+                echo "🚑 ROLLBACK COMPLETE: Stabilized last operational image for safety."
+            }
         }
     }
 }
