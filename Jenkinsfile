@@ -17,28 +17,25 @@ pipeline {
             }
         }
         
-        stage('Package App') {
+        stage('Build Docker Image') {
             steps {
-                echo 'Bundling deployment artifacts...'
-                sh 'mkdir -p dist'
-                sh 'cp index.html dist/'
-                sh "tar -czf restaurant-app-v${BUILD_NUMBER}.tar.gz dist/"
+                echo "🔨 Compiling the container image for Bunny's Bistro..."
+                // Builds a fresh Docker image labeled with your unique build number
+                sh "docker build -t restaurant-app:v${BUILD_NUMBER} ."
             }
         }
 
-        stage('Deploy to Production') {
+        stage('Deploy Container') {
             steps {
-                echo "🚀 Deploying Restaurant App v${BUILD_NUMBER} to live production server..."
-                sh 'mkdir -p simulated_production_server/'
-                sh 'cp dist/index.html simulated_production_server/'
-                echo "🎉 Application is LIVE!"
-            }
-        }
-
-        stage('Send Notifications') {
-            steps {
-                echo "📨 Dispatching system notifications..."
-                echo "SUCCESS: Restaurant App Build #${BUILD_NUMBER} has been successfully verified and deployed!"
+                echo "🚀 Deploying isolated container to production environment..."
+                
+                // 1. Clean up and stop any older running restaurant containers to free the port
+                sh 'docker stop restaurant-production || true'
+                sh 'docker rm restaurant-production || true'
+                
+                // 2. Run your fresh web application container on port 8081
+                sh "docker run -d --name restaurant-production -p 8081:80 restaurant-app:v${BUILD_NUMBER}"
+                echo "🎉 Application is LIVE on port 8081!"
             }
         }
     }
