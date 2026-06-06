@@ -36,14 +36,10 @@ pipeline {
         }
     }
 
-    /* NEW POST BLOCK FOR ARCHIVING */
     post {
         success {
             echo 'Archiving build artifacts for distribution...'
-            // Changed from dist/index.html to index.html
             archiveArtifacts artifacts: 'index.html', fingerprint: true
         }
     }
-        }
-    
 }
