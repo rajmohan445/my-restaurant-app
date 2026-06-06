@@ -40,7 +40,10 @@ pipeline {
     post {
         success {
             echo 'Archiving build artifacts for distribution...'
-            archiveArtifacts artifacts: 'dist/index.html', fingerprint: true
+            // Changed from dist/index.html to index.html
+            archiveArtifacts artifacts: 'index.html', fingerprint: true
+        }
+    }
         }
     }
 }
