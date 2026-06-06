@@ -2,13 +2,13 @@ pipeline {
     agent any
 
     parameters {
-        choice(name: 'DEPLOY_ENV', choices: ['Staging', 'Production'], description: 'Select the target environment for Bunny\'s Bistro')
+        choice(name: 'DEPLOY_ENV', choices: ['Staging', 'Production'], description: 'Target environment (Production only allowed from main branch)')
     }
 
     stages {
         stage('Fetch Code') {
             steps {
-                echo "Pulling latest code for ${params.DEPLOY_ENV} deployment..."
+                echo "Tracking Branch: ${env.BRANCH_NAME ?: 'main'}"
                 checkout scm
             }
         }
@@ -23,44 +23,39 @@ pipeline {
         
         stage('Build Docker Image') {
             steps {
-                echo "🔨 Compiling image: restaurant-app:${params.DEPLOY_ENV.toLowerCase()}-v${BUILD_NUMBER}"
-                sh "docker build -t restaurant-app:${params.DEPLOY_ENV.toLowerCase()}-v${BUILD_NUMBER} ."
+                script {
+                    // Force feature branches to lower-case naming
+                    def branchSuffix = (env.BRANCH_NAME ?: 'main').toLowerCase()
+                    sh "docker build -t restaurant-app:${branchSuffix}-v${BUILD_NUMBER} ."
+                }
             }
         }
 
         stage('Deploy To Target') {
             steps {
                 script {
-                    def targetPort = (params.DEPLOY_ENV == 'Production') ? '8081' : '8082'
-                    def containerName = "restaurant-${params.DEPLOY_ENV.toLowerCase()}"
+                    // Safety Rail: Force Staging rules if not on the main branch
+                    def actualEnv = (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == null) ? params.DEPLOY_ENV : 'Staging'
+                    def targetPort = (actualEnv == 'Production') ? '8081' : '8082'
+                    def containerName = "restaurant-${actualEnv.toLowerCase()}"
                     
-                    echo "🚀 Deploying to ${params.DEPLOY_ENV} on port ${targetPort}..."
+                    echo "🚀 Branch Guard Rails Active. Deploying to ${actualEnv} on port ${targetPort}..."
                     
                     sh "docker stop ${containerName} || true"
                     sh "docker rm ${containerName} || true"
-                    sh "docker run -d --name ${containerName} -p ${targetPort}:80 restaurant-app:${params.DEPLOY_ENV.toLowerCase()}-v${BUILD_NUMBER}"
+                    sh "docker run -d --name ${containerName} -p ${targetPort}:80 restaurant-app:${(env.BRANCH_NAME ?: 'main').toLowerCase()}-v${BUILD_NUMBER}"
                 }
             }
         }
     }
 
-post {
+    post {
         always {
-            echo '🧹 Clearing out dangling build layers and preserving disk health...'
+            echo '清理 🧹 Clearing out dangling build layers...'
             sh 'docker image prune -f'
         }
         success {
-            echo "✅ Deployment to ${params.DEPLOY_ENV} completed successfully!"
-            echo "💬 CHAT NOTIFICATION SENT TO TEAM: 🟢 SUCCESS! Build #${BUILD_NUMBER} for ${params.DEPLOY_ENV} is live. Check it out!"
-        }
-        failure {
-            script {
-                echo "🚨 EMERGENCY: Deployment failed! Initiating automated recovery strategy..."
-                def containerName = "restaurant-${params.DEPLOY_ENV.toLowerCase()}"
-                sh "docker start ${containerName} || echo 'No previous container found to recover.'"
-                echo "🚑 ROLLBACK COMPLETE: Stabilized last operational image for safety."
-                echo "💬 CHAT NOTIFICATION SENT TO TEAM: 🔴 CRITICAL ALERT! Build #${BUILD_NUMBER} failed during rollout to ${params.DEPLOY_ENV}. Automated rollback triggered!"
-            }
+            echo "💬 CHAT BROADCAST: Branch deployment successful."
         }
     }
 }
