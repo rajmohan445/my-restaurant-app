@@ -34,12 +34,23 @@ pipeline {
                 echo "🎉 Application is LIVE!"
             }
         }
+
+        stage('Send Notifications') {
+            steps {
+                echo "📨 Dispatching system notifications..."
+                echo "SUCCESS: Restaurant App Build #${BUILD_NUMBER} has been successfully verified and deployed!"
+            }
+        }
     }
 
     post {
         success {
             echo 'Archiving build artifacts for distribution...'
             archiveArtifacts artifacts: 'index.html', fingerprint: true
+            echo '✅ PIPELINE COMPLETE: All systems operational.'
+        }
+        failure {
+            echo '❌ PIPELINE CRASHED: Sending urgent alert to DevOps Team!'
         }
     }
 }
