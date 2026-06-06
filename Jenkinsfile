@@ -23,7 +23,16 @@ pipeline {
                 sh 'mkdir -p dist'
                 sh 'cp index.html dist/'
                 sh "tar -czf restaurant-app-v${BUILD_NUMBER}.tar.gz dist/"
-                echo "Successfully packaged variant v${BUILD_NUMBER}"
+            }
+        }
+
+        stage('Deploy to Production') {
+            steps {
+                echo "🚀 Deploying Restaurant App v${BUILD_NUMBER} to live production server..."
+                // This simulates moving the files to a live web directory
+                sh 'mkdir -p simulated_production_server/'
+                sh 'cp dist/index.html simulated_production_server/'
+                echo "🎉 Application is LIVE!"
             }
         }
     }
