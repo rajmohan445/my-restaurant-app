@@ -29,11 +29,18 @@ pipeline {
         stage('Deploy to Production') {
             steps {
                 echo "🚀 Deploying Restaurant App v${BUILD_NUMBER} to live production server..."
-                // This simulates moving the files to a live web directory
                 sh 'mkdir -p simulated_production_server/'
                 sh 'cp dist/index.html simulated_production_server/'
                 echo "🎉 Application is LIVE!"
             }
+        }
+    }
+
+    /* NEW POST BLOCK FOR ARCHIVING */
+    post {
+        success {
+            echo 'Archiving build artifacts for distribution...'
+            archiveArtifacts artifacts: 'dist/index.html', fingerprint: true
         }
     }
 }
